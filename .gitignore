@@ -1,0 +1,140 @@
+# MOSOFT MEMO SYSTEM - .gitignore
+
+# ===========================================
+# COMPOSER DEPENDENCIES
+# ===========================================
+vendor/
+composer.lock
+
+# ===========================================
+# USER-GENERATED CONTENT
+# ===========================================
+
+# PDF exports directory (generated PDFs)
+pdf_exports/
+!pdf_exports/index.php
+
+# Attachments directory (uploaded files)
+attachments/
+!attachments/.htaccess
+
+# ===========================================
+# CONFIGURATION & SENSITIVE FILES
+# ===========================================
+
+# Database configuration (contains credentials)
+config.php
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# ===========================================
+# LOGS & TEMPORARY FILES
+# ===========================================
+
+# PHP error logs
+*.log
+error.log
+php_errors.log
+
+# Temporary files
+*.tmp
+*.temp
+~*
+
+# Cache files
+cache/
+*.cache
+
+# ===========================================
+# SYSTEM & IDE FILES
+# ===========================================
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+
+# Linux
+*~
+.nfs*
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# ===========================================
+# BACKUP & DEVELOPMENT FILES
+# ===========================================
+
+# Database backups
+*.sql.backup
+*.sql.bak
+backup/
+backups/
+
+# Development/testing files
+test_*.php
+debug_*.php
+dev_*.php
+*_test.php
+*_debug.php
+
+# Favicon generator (development tool)
+favicon-generator.html
+
+# ===========================================
+# SECURITY & SYSTEM FILES
+# ===========================================
+
+# Session files
+sessions/
+tmp/
+
+# Upload temporary files
+upload_tmp/
+
+# System files
+.htaccess.backup
+.htpasswd
+
+# ===========================================
+# DOCUMENTATION DRAFTS
+# ===========================================
+
+# Draft documentation
+*.draft
+README.draft.md
+NOTES.md
+TODO.md
+
+# ===========================================
+# NODE.JS (if used for front-end tools)
+# ===========================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# ===========================================
+# CUSTOM RULES
+# ===========================================
+
+# Add any project-specific files to ignore below this line
