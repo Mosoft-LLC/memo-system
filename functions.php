@@ -22,6 +22,9 @@ if (!$connection) {
 // Set charset to UTF-8
 mysqli_set_charset($connection, "utf8");
 
+// Ensure required tables exist
+require_once("ensure_tables.php");
+
 /**
  * Hospital Memo System Functions
  * Updated for new database structure
@@ -2083,36 +2086,64 @@ function viewMemo($memo_id, $uid) {
     echo '</div>';
     echo '<div class="card-body">';
     
+    // Show success message if comment was just added
+    if (isset($_GET['comment_added']) && $_GET['comment_added'] == '1') {
+        echo '<div class="alert alert-success border-0 alert-dismissible fade show">';
+        echo '<i class="fas fa-check me-2"></i>Comment added successfully!';
+        echo '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+        echo '</div>';
+    }
+    
     // Handle new comment submission
     if ($_POST['action'] ?? '' === 'add_comment') {
         $comment_text = trim($_POST['comment_text'] ?? '');
         if (!empty($comment_text)) {
-            $comment_stmt = mysqli_prepare($connection, "
-                INSERT INTO memo_comments (memo_id, user_id, comment_text, created_at) 
-                VALUES (?, ?, ?, NOW())
-            ");
-            mysqli_stmt_bind_param($comment_stmt, "iis", $memo_id, $uid, $comment_text);
-            
-            if (mysqli_stmt_execute($comment_stmt)) {
-                echo '<div class="alert alert-success border-0">';
-                echo '<i class="fas fa-check me-2"></i>Comment added successfully!';
+            try {
+                $comment_stmt = mysqli_prepare($connection, "
+                    INSERT INTO memo_comments (memo_id, user_id, comment, created_at) 
+                    VALUES (?, ?, ?, NOW())
+                ");
+                
+                if ($comment_stmt) {
+                    mysqli_stmt_bind_param($comment_stmt, "iis", $memo_id, $uid, $comment_text);
+                    
+                    if (mysqli_stmt_execute($comment_stmt)) {
+                        mysqli_stmt_close($comment_stmt);
+                        // Use POST-Redirect-GET pattern to prevent resubmission
+                        header("Location: dologin.php?op=view_memo&memo_id=" . $memo_id . "&comment_added=1");
+                        exit();
+                    } else {
+                        echo '<div class="alert alert-danger border-0">';
+                        echo '<i class="fas fa-exclamation-triangle me-2"></i>Error adding comment. Please try again.';
+                        echo '</div>';
+                    }
+                    mysqli_stmt_close($comment_stmt);
+                } else {
+                    echo '<div class="alert alert-danger border-0">';
+                    echo '<i class="fas fa-exclamation-triangle me-2"></i>Database error. Please contact administrator.';
+                    echo '</div>';
+                }
+            } catch (Exception $e) {
+                error_log("Comment error: " . $e->getMessage());
+                echo '<div class="alert alert-danger border-0">';
+                echo '<i class="fas fa-exclamation-triangle me-2"></i>Comment system temporarily unavailable.';
                 echo '</div>';
-                echo '<script>setTimeout(function() { window.location.reload(); }, 1500);</script>';
             }
         }
     }
     
     // Show existing comments
-    $comments_result = mysqli_query($connection, "
-        SELECT mc.*, u.first_name, u.last_name, u.position, d.department_name
-        FROM memo_comments mc 
-        JOIN users u ON mc.user_id = u.user_id 
-        LEFT JOIN departments d ON u.department_id = d.department_id 
-        WHERE mc.memo_id = $memo_id 
-        ORDER BY mc.created_at ASC
-    ");
-    
-    if (mysqli_num_rows($comments_result) > 0) {
+    try {
+        $comments_result = mysqli_query($connection, "
+            SELECT mc.*, u.first_name, u.last_name, u.position, d.department_name
+            FROM memo_comments mc 
+            JOIN users u ON mc.user_id = u.user_id 
+            LEFT JOIN departments d ON u.department_id = d.department_id 
+            WHERE mc.memo_id = $memo_id 
+            ORDER BY mc.created_at ASC
+        ");
+        
+        if ($comments_result && mysqli_num_rows($comments_result) > 0) {
         echo '<div class="comments-list mb-3" style="max-height: 300px; overflow-y: auto;">';
         while ($comment = mysqli_fetch_assoc($comments_result)) {
             echo '<div class="d-flex gap-2 mb-3">';
@@ -2130,21 +2161,30 @@ function viewMemo($memo_id, $uid) {
             echo '</div>';
             echo '<small class="text-muted">' . date('M j, Y g:i A', strtotime($comment['created_at'])) . '</small>';
             echo '</div>';
-            echo '<p class="mb-0" style="line-height: 1.6;">' . nl2br(htmlspecialchars($comment['comment_text'])) . '</p>';
+            echo '<p class="mb-0" style="line-height: 1.6;">' . nl2br(htmlspecialchars($comment['comment'])) . '</p>';
             echo '</div>';
             echo '</div>';
             echo '</div>';
         }
         echo '</div>';
-    } else {
+        } else {
+            echo '<div class="text-center py-3 text-muted">';
+            echo '<i class="fas fa-comment-slash mb-2" style="font-size: 2rem; opacity: 0.3;"></i>';
+            echo '<p>No comments yet. Be the first to comment!</p>';
+            echo '</div>';
+        }
+    } catch (Exception $e) {
+        error_log("Comments display error: " . $e->getMessage());
         echo '<div class="text-center py-3 text-muted">';
-        echo '<i class="fas fa-comment-slash mb-2" style="font-size: 2rem; opacity: 0.3;"></i>';
-        echo '<p>No comments yet. Be the first to comment!</p>';
+        echo '<i class="fas fa-exclamation-triangle mb-2" style="font-size: 2rem; opacity: 0.3;"></i>';
+        echo '<p>Comments temporarily unavailable.</p>';
         echo '</div>';
     }
     
     // Add comment form
     echo '<form method="post" class="mt-3">';
+    echo '<input type="hidden" name="op" value="view_memo">';
+    echo '<input type="hidden" name="memo_id" value="' . htmlspecialchars($memo_id) . '">';
     echo '<input type="hidden" name="action" value="add_comment">';
     echo '<div class="mb-3">';
     echo '<textarea name="comment_text" class="form-control" rows="3" placeholder="Add your comment..." required></textarea>';

@@ -39,13 +39,26 @@ jobs:
         mkdir -p deploy-package/attachments
         mkdir -p deploy-package/pdf_exports
         
-        # Copy application files (excluding what's in .gitignore)
-        rsync -av --exclude-from='.gitignore' \
+        # Copy application files with custom exclusions (not using .gitignore)
+        rsync -av \
           --exclude='.git/' \
           --exclude='.github/' \
           --exclude='deploy-package/' \
           --exclude='README.md' \
+          --exclude='PDF_FEATURE_README.md' \
+          --exclude='pdf_exports/*' \
+          --exclude='attachments/*' \
+          --include='pdf_exports/index.php' \
+          --include='attachments/.htaccess' \
           ./ deploy-package/
+          
+        # Ensure vendor directory and composer files are included
+        if [ -d "vendor" ]; then
+          echo "✅ Vendor directory found and included in deployment"
+        else
+          echo "⚠️  Vendor directory not found - running composer install"
+          composer install --no-dev --optimize-autoloader --no-interaction
+        fi
           
         # Create .htaccess for security
         echo "Options -Indexes" > deploy-package/attachments/.htaccess
@@ -57,6 +70,15 @@ jobs:
         
         # Create sample config file (user will need to customize)
         cp config.php deploy-package/config.sample.php || echo "No config.php found, creating sample..."
+        
+        # Verify essential files are included
+        echo "🔍 Verifying deployment package contents:"
+        echo "   • composer.json: $([ -f deploy-package/composer.json ] && echo "✅ Found" || echo "❌ Missing")"
+        echo "   • composer.lock: $([ -f deploy-package/composer.lock ] && echo "✅ Found" || echo "❌ Missing")"
+        echo "   • vendor/autoload.php: $([ -f deploy-package/vendor/autoload.php ] && echo "✅ Found" || echo "❌ Missing")"
+        echo "   • TCPDF: $([ -f deploy-package/vendor/tecnickcom/tcpdf/tcpdf.php ] && echo "✅ Found" || echo "❌ Missing")"
+        echo "   • functions.php: $([ -f deploy-package/functions.php ] && echo "✅ Found" || echo "❌ Missing")"
+        echo ""
         
     - name: 🌐 Deploy via FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
@@ -78,7 +100,14 @@ jobs:
       run: |
         echo "✅ Deployment completed successfully!"
         echo "🔗 Your memo system should now be available at your InfinityFree domain"
+        echo "📦 Included in deployment:"
+        echo "   • All PHP application files"
+        echo "   • Composer dependencies (vendor/ directory)"
+        echo "   • TCPDF library for PDF generation"
+        echo "   • Security files (.htaccess)"
+        echo ""
         echo "⚠️  Don't forget to:"
         echo "   1. Create and configure config.php on the server"
         echo "   2. Import the database using the provided db.sql file"
         echo "   3. Set proper permissions for attachments/ and pdf_exports/ directories"
+        echo "   4. Verify that PHP extensions (mysqli, gd, mbstring) are enabled"
