@@ -1,0 +1,84 @@
+name: Deploy to InfinityFree
+
+# Trigger deployment on push to main branch and manual dispatch
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to InfinityFree
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 🚀 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 🐘 Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+        extensions: mysqli, curl, fileinfo, gd
+        tools: composer
+        
+    - name: 📦 Cache Composer dependencies
+      uses: actions/cache@v3
+      with:
+        path: vendor
+        key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-composer-
+          
+    - name: 🔧 Install Composer dependencies
+      run: composer install --no-dev --optimize-autoloader --no-interaction
+      
+    - name: 📝 Create deployment package
+      run: |
+        # Create necessary directories for deployment
+        mkdir -p deploy-package/attachments
+        mkdir -p deploy-package/pdf_exports
+        
+        # Copy application files (excluding what's in .gitignore)
+        rsync -av --exclude-from='.gitignore' \
+          --exclude='.git/' \
+          --exclude='.github/' \
+          --exclude='deploy-package/' \
+          --exclude='README.md' \
+          ./ deploy-package/
+          
+        # Create .htaccess for security
+        echo "Options -Indexes" > deploy-package/attachments/.htaccess
+        echo "Options -Indexes" > deploy-package/pdf_exports/.htaccess
+        
+        # Create index.php files for security
+        echo "<?php header('Location: ../index.php'); exit(); ?>" > deploy-package/attachments/index.php
+        echo "<?php header('Location: ../index.php'); exit(); ?>" > deploy-package/pdf_exports/index.php
+        
+        # Create sample config file (user will need to customize)
+        cp config.php deploy-package/config.sample.php || echo "No config.php found, creating sample..."
+        
+    - name: 🌐 Deploy via FTP
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ./deploy-package/
+        server-dir: /htdocs/
+        exclude: |
+          **/.git*
+          **/.git*/**
+          **/node_modules/**
+          **/tests/**
+          **/*.md
+          config.php
+        
+    - name: 🎉 Deployment Success
+      run: |
+        echo "✅ Deployment completed successfully!"
+        echo "🔗 Your memo system should now be available at your InfinityFree domain"
+        echo "⚠️  Don't forget to:"
+        echo "   1. Create and configure config.php on the server"
+        echo "   2. Import the database using the provided db.sql file"
+        echo "   3. Set proper permissions for attachments/ and pdf_exports/ directories"

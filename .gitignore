@@ -24,6 +24,8 @@ attachments/
 
 # Database configuration (contains credentials)
 config.php
+# Keep sample config for reference
+!config.sample.php
 
 # Environment files
 .env
