@@ -183,10 +183,13 @@ function genMenu($uid) {
         echo '</a>';
     }
     
-    echo '<a href="dologin.php?op=listcontacts" class="nav-link text-decoration-none py-3 px-4 d-flex align-items-center gap-3 hover-bg-light">';
-    echo '<i class="fas fa-users text-secondary" style="width: 18px;"></i>';
-    echo '<span class="fw-medium">Staff Directory</span>';
-    echo '</a>';
+    // Staff Directory - only for users who can send memos
+    if ($can_send) {
+        echo '<a href="dologin.php?op=listcontacts" class="nav-link text-decoration-none py-3 px-4 d-flex align-items-center gap-3 hover-bg-light">';
+        echo '<i class="fas fa-users text-secondary" style="width: 18px;"></i>';
+        echo '<span class="fw-medium">Staff Directory</span>';
+        echo '</a>';
+    }
     
     echo '</div>';
     
@@ -275,6 +278,9 @@ function genMenu($uid) {
 // Function to display enhanced dashboard with better UI/UX
 function showDashboard($uid) {
     global $connection;
+    
+    // Get user information for permission checks
+    $user_info = getUserInfo($uid);
     
     echo '<div class="container-fluid fade-in">';
     echo '<div class="row align-items-center mb-4">';
@@ -493,10 +499,14 @@ function showDashboard($uid) {
     echo '<div class="card-body">';
     
     echo '<div class="d-grid gap-3">';
-    echo '<a href="dologin.php?op=compose" class="btn btn-primary btn-lg d-flex align-items-center justify-content-center gap-2 py-3">';
-    echo '<i class="fas fa-plus-circle"></i>';
-    echo '<span>Compose New Memo</span>';
-    echo '</a>';
+    
+    // Compose New Memo - only for users who can send memos
+    if ($user_info['can_send_memos']) {
+        echo '<a href="dologin.php?op=compose" class="btn btn-primary btn-lg d-flex align-items-center justify-content-center gap-2 py-3">';
+        echo '<i class="fas fa-plus-circle"></i>';
+        echo '<span>Compose New Memo</span>';
+        echo '</a>';
+    }
     
     echo '<a href="dologin.php?op=inbox" class="btn btn-outline-primary d-flex align-items-center justify-content-center gap-2 py-2">';
     echo '<i class="fas fa-inbox"></i>';
@@ -506,10 +516,13 @@ function showDashboard($uid) {
     }
     echo '</a>';
     
-    echo '<a href="dologin.php?op=listcontacts" class="btn btn-outline-secondary d-flex align-items-center justify-content-center gap-2 py-2">';
-    echo '<i class="fas fa-address-book"></i>';
-    echo '<span>Staff Directory</span>';
-    echo '</a>';
+    // Staff Directory - only for users who can send memos
+    if ($user_info['can_send_memos']) {
+        echo '<a href="dologin.php?op=listcontacts" class="btn btn-outline-secondary d-flex align-items-center justify-content-center gap-2 py-2">';
+        echo '<i class="fas fa-address-book"></i>';
+        echo '<span>Staff Directory</span>';
+        echo '</a>';
+    }
     echo '</div>';
     
     // System status
@@ -561,25 +574,19 @@ function showDashboard($uid) {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.7; }
         }
-        .badge-priority-urgent {
-            background: linear-gradient(135deg, #FF5252, #D32F2F);
-            color: white;
-            border: 1px solid rgba(211, 47, 47, 0.3);
+        
+        /* Enhanced priority badge styling for dashboard */
+        .badge.bg-danger {
+            box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
         }
-        .badge-priority-high {
-            background: linear-gradient(135deg, #FF9800, #F57C00);
-            color: white;
-            border: 1px solid rgba(245, 124, 0, 0.3);
+        .badge.bg-warning {
+            box-shadow: 0 2px 4px rgba(255, 193, 7, 0.3);
         }
-        .badge-priority-normal {
-            background: linear-gradient(135deg, #2196F3, #1976D2);
-            color: white;
-            border: 1px solid rgba(25, 118, 210, 0.3);
+        .badge.bg-primary {
+            box-shadow: 0 2px 4px rgba(13, 110, 253, 0.3);
         }
-        .badge-priority-low {
-            background: linear-gradient(135deg, #9E9E9E, #616161);
-            color: white;
-            border: 1px solid rgba(97, 97, 97, 0.3);
+        .badge.bg-secondary {
+            box-shadow: 0 2px 4px rgba(108, 117, 125, 0.3);
         }
     </style>';
 }
@@ -598,26 +605,26 @@ function getPriorityBadge($priority) {
         
         if ($priority_info) {
             $response_time = $priority_info['response_time_hours'];
-            $badge_class = 'badge-priority-normal';
+            $badge_class = 'bg-primary';
             $icon = 'fas fa-circle-info';
             $pulse_class = '';
             
             switch ($priority) {
                 case 'urgent': 
-                    $badge_class = 'badge-priority-urgent';
+                    $badge_class = 'bg-danger';
                     $icon = 'fas fa-exclamation-triangle';
                     $pulse_class = 'priority-pulse';
                     break;
                 case 'high': 
-                    $badge_class = 'badge-priority-high';
+                    $badge_class = 'bg-warning text-dark';
                     $icon = 'fas fa-exclamation-circle';
                     break;
                 case 'normal': 
-                    $badge_class = 'badge-priority-normal';
+                    $badge_class = 'bg-primary';
                     $icon = 'fas fa-circle-info';
                     break;
                 case 'low': 
-                    $badge_class = 'badge-priority-low';
+                    $badge_class = 'bg-secondary';
                     $icon = 'fas fa-clock';
                     break;
             }
@@ -633,34 +640,34 @@ function getPriorityBadge($priority) {
         }
     }
     
-    // Enhanced fallback with consistent styling
+    // Enhanced fallback with Bootstrap classes and inline styles for reliability
     switch ($priority) {
         case 'urgent':
-            return '<span class="badge badge-priority-urgent priority-pulse d-inline-flex align-items-center gap-1" 
+            return '<span class="badge bg-danger priority-pulse d-inline-flex align-items-center gap-1" 
                     style="font-size: 0.75rem; padding: 0.5rem 0.75rem; font-weight: 500; border-radius: 20px;">
                     <i class="fas fa-exclamation-triangle" style="font-size: 0.7rem;"></i>
                     <span>Urgent</span>
                     </span>';
         case 'high':
-            return '<span class="badge badge-priority-high d-inline-flex align-items-center gap-1" 
+            return '<span class="badge bg-warning text-dark d-inline-flex align-items-center gap-1" 
                     style="font-size: 0.75rem; padding: 0.5rem 0.75rem; font-weight: 500; border-radius: 20px;">
                     <i class="fas fa-exclamation-circle" style="font-size: 0.7rem;"></i>
                     <span>High</span>
                     </span>';
         case 'normal':
-            return '<span class="badge badge-priority-normal d-inline-flex align-items-center gap-1" 
+            return '<span class="badge bg-primary d-inline-flex align-items-center gap-1" 
                     style="font-size: 0.75rem; padding: 0.5rem 0.75rem; font-weight: 500; border-radius: 20px;">
                     <i class="fas fa-circle-info" style="font-size: 0.7rem;"></i>
                     <span>Normal</span>
                     </span>';
         case 'low':
-            return '<span class="badge badge-priority-low d-inline-flex align-items-center gap-1" 
+            return '<span class="badge bg-secondary d-inline-flex align-items-center gap-1" 
                     style="font-size: 0.75rem; padding: 0.5rem 0.75rem; font-weight: 500; border-radius: 20px;">
                     <i class="fas fa-clock" style="font-size: 0.7rem;"></i>
                     <span>Low</span>
                     </span>';
         default:
-            return '<span class="badge badge-priority-normal d-inline-flex align-items-center gap-1" 
+            return '<span class="badge bg-primary d-inline-flex align-items-center gap-1" 
                     style="font-size: 0.75rem; padding: 0.5rem 0.75rem; font-weight: 500; border-radius: 20px;">
                     <i class="fas fa-circle-info" style="font-size: 0.7rem;"></i>
                     <span>Normal</span>
@@ -686,17 +693,19 @@ function showInbox($uid) {
     ");
     
     if (mysqli_num_rows($result) > 0) {
+        echo '<div class="card border-0 shadow-sm">';
+        echo '<div class="card-body p-0">';
         echo '<div class="table-responsive">';
-        echo '<table class="table table-hover">';
+        echo '<table class="table table-hover mb-0">';
         echo '<thead class="table-dark">';
         echo '<tr>';
-        echo '<th>Status</th>';
-        echo '<th>Subject</th>';
-        echo '<th>From</th>';
-        echo '<th>Category</th>';
-        echo '<th>Priority</th>';
-        echo '<th>Date</th>';
-        echo '<th>Actions</th>';
+        echo '<th scope="col" class="text-white">📊 Status</th>';
+        echo '<th scope="col" class="text-white">📄 Subject</th>';
+        echo '<th scope="col" class="text-white">👤 From</th>';
+        echo '<th scope="col" class="text-white">🏷️ Category</th>';
+        echo '<th scope="col" class="text-white">⚡ Priority</th>';
+        echo '<th scope="col" class="text-white">📅 Date</th>';
+        echo '<th scope="col" class="text-white">⚙️ Actions</th>';
         echo '</tr>';
         echo '</thead>';
         echo '<tbody>';
@@ -744,11 +753,67 @@ function showInbox($uid) {
         echo '</tbody>';
         echo '</table>';
         echo '</div>';
+        echo '</div></div>';
     } else {
         echo '<div class="alert alert-info">No memos in your inbox yet.</div>';
     }
     
     echo '</div>';
+    
+    // Add custom CSS for inbox styling
+    echo '<style>
+        /* Ensure table headers are visible */
+        .table-dark th {
+            background-color: #212529 !important;
+            color: #ffffff !important;
+            border-color: #454d55 !important;
+            font-weight: 600;
+        }
+        
+        /* Fix priority badge visibility */
+        .badge-priority-urgent {
+            background: linear-gradient(135deg, #dc3545, #c82333) !important;
+            color: white !important;
+            border: 1px solid rgba(220, 53, 69, 0.3);
+        }
+        
+        .badge-priority-high {
+            background: linear-gradient(135deg, #fd7e14, #e55a00) !important;
+            color: white !important;
+            border: 1px solid rgba(253, 126, 20, 0.3);
+        }
+        
+        .badge-priority-normal {
+            background: linear-gradient(135deg, #0d6efd, #0b5ed7) !important;
+            color: white !important;
+            border: 1px solid rgba(13, 110, 253, 0.3);
+        }
+        
+        .badge-priority-low {
+            background: linear-gradient(135deg, #6c757d, #5a6268) !important;
+            color: white !important;
+            border: 1px solid rgba(108, 117, 125, 0.3);
+        }
+        
+        /* Enhanced table styling */
+        .table-hover tbody tr:hover {
+            background-color: rgba(13, 110, 253, 0.05) !important;
+        }
+        
+        .table-warning {
+            background-color: rgba(255, 193, 7, 0.1) !important;
+        }
+        
+        /* Pulse animation for urgent priorities */
+        .priority-pulse {
+            animation: priorityPulse 2s infinite;
+        }
+        
+        @keyframes priorityPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+    </style>';
 }
 
 // Function to add new users (enhanced for new structure)
@@ -961,47 +1026,180 @@ function adminusers($username, $fname, $lname, $password, $action) {
 function listContacts($uid) {
     global $connection;
     
+    // Check if user has permission to view staff directory
+    $user_info = getUserInfo($uid);
+    if (!$user_info['can_send_memos']) {
+        echo '<div class="container-fluid">';
+        echo '<div class="alert alert-warning">';
+        echo '<h4>⚠️ Access Restricted</h4>';
+        echo 'Your role (' . htmlspecialchars($user_info['role_name']) . ') does not have permission to view the staff directory.';
+        echo '<br><br>Staff directory access is limited to users who can send memos.';
+        echo '</div>';
+        echo '<a href="dologin.php?op=dashboard" class="btn btn-secondary">← Back to Dashboard</a>';
+        echo '</div>';
+        return;
+    }
+    
     echo '<div class="container-fluid">';
     echo '<h2>👥 Staff Directory</h2>';
     
-    $result = mysqli_query($connection, "
-        SELECT u.*, d.department_name 
+    // Search functionality
+    $search_query = trim($_GET['search'] ?? '');
+    
+    // Build the base query
+    $base_query = "
+        SELECT u.*, d.department_name, ur.role_name
         FROM users u 
         LEFT JOIN departments d ON u.department_id = d.department_id 
-        WHERE u.is_active = 1 
-        ORDER BY u.last_name, u.first_name
-    ");
+        LEFT JOIN user_roles ur ON u.role_id = ur.role_id
+        WHERE u.is_active = 1
+    ";
+    
+    // Add search conditions if search query is provided
+    if (!empty($search_query)) {
+        $search_escaped = mysqli_real_escape_string($connection, $search_query);
+        $base_query .= " AND (
+            u.first_name LIKE '%$search_escaped%' OR 
+            u.last_name LIKE '%$search_escaped%' OR 
+            u.username LIKE '%$search_escaped%' OR 
+            u.email LIKE '%$search_escaped%' OR 
+            u.position LIKE '%$search_escaped%' OR 
+            d.department_name LIKE '%$search_escaped%' OR
+            ur.role_name LIKE '%$search_escaped%'
+        )";
+    }
+    
+    $base_query .= " ORDER BY u.last_name, u.first_name";
+    
+    // Search form
+    echo '<div class="row mb-4">';
+    echo '<div class="col-md-8">';
+    echo '<div class="card border-0 shadow-sm">';
+    echo '<div class="card-body">';
+    echo '<form method="get" action="dologin.php" class="d-flex gap-2">';
+    echo '<input type="hidden" name="op" value="listcontacts">';
+    echo '<div class="input-group">';
+    echo '<span class="input-group-text bg-light border-end-0">';
+    echo '<i class="fas fa-search text-muted"></i>';
+    echo '</span>';
+    echo '<input type="text" name="search" class="form-control border-start-0" ';
+    echo 'placeholder="Search by name, email, position, department, or role..." ';
+    echo 'value="' . htmlspecialchars($search_query) . '">';
+    echo '<button type="submit" class="btn btn-primary">Search</button>';
+    if (!empty($search_query)) {
+        echo '<a href="dologin.php?op=listcontacts" class="btn btn-outline-secondary">Clear</a>';
+    }
+    echo '</div>';
+    echo '</form>';
+    echo '</div></div></div>';
+    
+    // Results count and stats
+    echo '<div class="col-md-4">';
+    echo '<div class="card border-0 shadow-sm">';
+    echo '<div class="card-body text-center">';
+    
+    // Get total count
+    $count_result = mysqli_query($connection, $base_query);
+    $result_count = mysqli_num_rows($count_result);
+    
+    if (!empty($search_query)) {
+        echo '<h5 class="text-primary mb-1">' . $result_count . '</h5>';
+        echo '<small class="text-muted">Search Results</small>';
+    } else {
+        echo '<h5 class="text-primary mb-1">' . $result_count . '</h5>';
+        echo '<small class="text-muted">Total Staff Members</small>';
+    }
+    echo '</div></div></div>';
+    echo '</div>';
+    
+    // Display search results message
+    if (!empty($search_query)) {
+        echo '<div class="alert alert-info border-0">';
+        echo '<i class="fas fa-info-circle me-2"></i>';
+        echo '<strong>Search Results:</strong> Found ' . $result_count . ' staff member(s) matching "' . htmlspecialchars($search_query) . '"';
+        echo '</div>';
+    }
+    
+    $result = mysqli_query($connection, $base_query);
     
     if (mysqli_num_rows($result) > 0) {
         echo '<div class="row">';
         
         while ($user = mysqli_fetch_assoc($result)) {
             echo '<div class="col-md-6 col-lg-4 mb-3">';
-            echo '<div class="card">';
+            echo '<div class="card border-0 shadow-sm h-100">';
             echo '<div class="card-body">';
-            echo '<h6 class="card-title">' . htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) . '</h6>';
-            echo '<p class="card-text">';
-            echo '<strong>Username:</strong> ' . htmlspecialchars($user['username']) . '<br>';
-            if ($user['department_name']) {
-                echo '<strong>Department:</strong> ' . htmlspecialchars($user['department_name']) . '<br>';
+            
+            // User header with avatar
+            echo '<div class="d-flex align-items-center mb-3">';
+            echo '<div class="bg-primary rounded-circle d-flex align-items-center justify-content-center text-white me-3" style="width: 48px; height: 48px; font-weight: 600;">';
+            echo strtoupper(substr($user['first_name'], 0, 1) . substr($user['last_name'], 0, 1));
+            echo '</div>';
+            echo '<div>';
+            echo '<h6 class="card-title mb-1">' . htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) . '</h6>';
+            echo '<small class="text-muted">@' . htmlspecialchars($user['username']) . '</small>';
+            echo '</div>';
+            echo '</div>';
+            
+            echo '<div class="card-text">';
+            
+            // Role badge
+            if ($user['role_name']) {
+                echo '<div class="mb-2">';
+                echo '<span class="badge bg-info">' . htmlspecialchars($user['role_name']) . '</span>';
+                if ($user['is_admin']) {
+                    echo ' <span class="badge bg-warning">Administrator</span>';
+                }
+                echo '</div>';
             }
+            
+            // Details
             if ($user['position']) {
-                echo '<strong>Position:</strong> ' . htmlspecialchars($user['position']) . '<br>';
+                echo '<div class="d-flex align-items-center mb-2">';
+                echo '<i class="fas fa-briefcase text-muted me-2" style="width: 16px;"></i>';
+                echo '<small>' . htmlspecialchars($user['position']) . '</small>';
+                echo '</div>';
             }
+            
+            if ($user['department_name']) {
+                echo '<div class="d-flex align-items-center mb-2">';
+                echo '<i class="fas fa-building text-muted me-2" style="width: 16px;"></i>';
+                echo '<small>' . htmlspecialchars($user['department_name']) . '</small>';
+                echo '</div>';
+            }
+            
             if ($user['email']) {
-                echo '<strong>Email:</strong> ' . htmlspecialchars($user['email']) . '<br>';
+                echo '<div class="d-flex align-items-center mb-3">';
+                echo '<i class="fas fa-envelope text-muted me-2" style="width: 16px;"></i>';
+                echo '<small><a href="mailto:' . htmlspecialchars($user['email']) . '" class="text-decoration-none">' . htmlspecialchars($user['email']) . '</a></small>';
+                echo '</div>';
             }
-            if ($user['is_admin']) {
-                echo '<span class="badge bg-warning">Administrator</span>';
-            }
-            echo '</p>';
-            echo '<a href="dologin.php?op=compose&to_user=' . $user['user_id'] . '" class="btn btn-sm btn-primary">Send Memo</a>';
+            
+            echo '</div>';
+            
+            // Action button
+            echo '<div class="mt-auto">';
+            echo '<a href="dologin.php?op=compose&to_user=' . $user['user_id'] . '" class="btn btn-primary btn-sm d-flex align-items-center justify-content-center gap-2">';
+            echo '<i class="fas fa-paper-plane"></i>';
+            echo '<span>Send Memo</span>';
+            echo '</a>';
+            echo '</div>';
+            
             echo '</div></div></div>';
         }
         
         echo '</div>';
     } else {
-        echo '<div class="alert alert-info">No users found.</div>';
+        if (!empty($search_query)) {
+            echo '<div class="text-center py-5">';
+            echo '<i class="fas fa-search text-muted" style="font-size: 3rem; opacity: 0.3;"></i>';
+            echo '<h5 class="text-muted mt-3">No Results Found</h5>';
+            echo '<p class="text-muted">No staff members match your search criteria. Try different keywords.</p>';
+            echo '<a href="dologin.php?op=listcontacts" class="btn btn-outline-primary">View All Staff</a>';
+            echo '</div>';
+        } else {
+            echo '<div class="alert alert-info">No users found.</div>';
+        }
     }
     
     echo '</div>';
@@ -1626,18 +1824,20 @@ function showSentMemos($uid) {
     ");
     
     if (mysqli_num_rows($result) > 0) {
+        echo '<div class="card border-0 shadow-sm">';
+        echo '<div class="card-body p-0">';
         echo '<div class="table-responsive">';
-        echo '<table class="table table-hover">';
+        echo '<table class="table table-hover mb-0">';
         echo '<thead class="table-dark">';
         echo '<tr>';
-        echo '<th>Memo #</th>';
-        echo '<th>Subject</th>';
-        echo '<th>Category</th>';
-        echo '<th>Priority</th>';
-        echo '<th>Recipients</th>';
-        echo '<th>Status</th>';
-        echo '<th>Date</th>';
-        echo '<th>Actions</th>';
+        echo '<th scope="col" class="text-white">📄 Memo Number</th>';
+        echo '<th scope="col" class="text-white">📝 Subject</th>';
+        echo '<th scope="col" class="text-white">🏷️ Category</th>';
+        echo '<th scope="col" class="text-white">⚡ Priority</th>';
+        echo '<th scope="col" class="text-white">👥 Recipients</th>';
+        echo '<th scope="col" class="text-white">📊 Status</th>';
+        echo '<th scope="col" class="text-white">📅 Date</th>';
+        echo '<th scope="col" class="text-white">⚙️ Actions</th>';
         echo '</tr>';
         echo '</thead>';
         echo '<tbody>';
@@ -1693,11 +1893,62 @@ function showSentMemos($uid) {
         echo '</tbody>';
         echo '</table>';
         echo '</div>';
+        echo '</div></div>';
     } else {
         echo '<div class="alert alert-info">You haven\'t sent any memos yet.</div>';
     }
     
     echo '</div>';
+    
+    // Add custom CSS for sent memos styling
+    echo '<style>
+        /* Ensure table headers are visible */
+        .table-dark th {
+            background-color: #343a40 !important;
+            color: #ffffff !important;
+            border-color: #454d55 !important;
+        }
+        
+        /* Fix priority badge visibility */
+        .badge-priority-urgent {
+            background-color: #dc3545 !important;
+            color: #ffffff !important;
+        }
+        
+        .badge-priority-high {
+            background-color: #fd7e14 !important;
+            color: #ffffff !important;
+        }
+        
+        .badge-priority-normal {
+            background-color: #0d6efd !important;
+            color: #ffffff !important;
+        }
+        
+        .badge-priority-low {
+            background-color: #6c757d !important;
+            color: #ffffff !important;
+        }
+        
+        /* Enhanced table styling */
+        .table-hover tbody tr:hover {
+            background-color: rgba(0, 123, 255, 0.1) !important;
+        }
+        
+        /* Status badge styling */
+        .badge {
+            font-size: 0.75rem !important;
+        }
+        
+        /* Code styling for memo numbers */
+        code {
+            background-color: #f8f9fa;
+            color: #e83e8c;
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+        }
+    </style>';
 }
 
 // Function to view a specific memo
