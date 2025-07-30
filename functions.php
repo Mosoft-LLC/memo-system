@@ -3008,21 +3008,26 @@ function showSystemReports($uid) {
     echo '<div class="card">';
     echo '<div class="card-header"><h5>👤 User Engagement (Last 30 Days)</h5></div>';
     echo '<div class="card-body">';
-    
+
     $user_engagement = mysqli_query($connection, "
-        SELECT u.first_name, u.last_name, d.department_name,
-               COUNT(DISTINCT m.memo_id) as sent_count,
-               COUNT(DISTINCT mr.memo_id) as received_count
+    SELECT * FROM (
+        SELECT 
+            u.first_name, 
+            u.last_name, 
+            d.department_name,
+            COUNT(DISTINCT m.memo_id) AS sent_count,
+            COUNT(DISTINCT mr.memo_id) AS received_count
         FROM users u 
         LEFT JOIN departments d ON u.department_id = d.department_id
         LEFT JOIN memos m ON u.user_id = m.sender_id AND m.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
         LEFT JOIN memo_recipients mr ON u.user_id = mr.user_id 
         LEFT JOIN memos m2 ON mr.memo_id = m2.memo_id AND m2.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
         WHERE u.is_active = 1 
-        GROUP BY u.user_id 
-        HAVING sent_count > 0 OR received_count > 0
-        ORDER BY (sent_count + received_count) DESC 
-        LIMIT 10
+        GROUP BY u.user_id
+    ) AS user_activity
+    WHERE sent_count > 0 OR received_count > 0
+    ORDER BY (sent_count + received_count) DESC 
+    LIMIT 10
     ");
     
     echo '<div class="table-responsive" style="max-height: 300px; overflow-y: auto;">';
